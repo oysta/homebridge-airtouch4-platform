@@ -12,29 +12,36 @@ module.exports = function (homebridge) {
 	UUIDGen = homebridge.hap.uuid;
 	FakeGatoHistoryService = require("fakegato-history")(homebridge);
 
+	// Formats/Perms live on the Characteristic class in older hap-nodejs, but only
+	// as top-level hap exports in hap-nodejs 2.x (bundled with Homebridge 2.x)
+	let Formats = homebridge.hap.Formats || Characteristic.Formats;
+	let Perms = homebridge.hap.Perms || Characteristic.Perms;
+
 	// AC Spill Custom Characteristic
-	CustomCharacteristic.SpillStatus = function() {
-		Characteristic.call(this, "Spill Active", CustomCharacteristic.SpillStatus.UUID);
-		this.setProps({
-			format: Characteristic.Formats.BOOL,
-			perms: [Characteristic.Perms.READ, Characteristic.Perms.NOTIFY],
-		});
-		this.value = this.getDefaultValue();
+	CustomCharacteristic.SpillStatus = class extends Characteristic {
+		constructor() {
+			super("Spill Active", CustomCharacteristic.SpillStatus.UUID);
+			this.setProps({
+				format: Formats.BOOL,
+				perms: [Perms.PAIRED_READ, Perms.NOTIFY],
+			});
+			this.value = this.getDefaultValue();
+		}
 	};
 	CustomCharacteristic.SpillStatus.UUID = "154c4ebb-a16f-488b-8968-2e5bbe15809d";
-	util.inherits(CustomCharacteristic.SpillStatus, Characteristic);
 
 	// AC Timer Custom Characteristic
-	CustomCharacteristic.TimerStatus = function() {
-		Characteristic.call(this, "Timer Set", CustomCharacteristic.TimerStatus.UUID);
-		this.setProps({
-			format: Characteristic.Formats.BOOL,
-			perms: [Characteristic.Perms.READ, Characteristic.Perms.NOTIFY],
-		});
-		this.value = this.getDefaultValue();
+	CustomCharacteristic.TimerStatus = class extends Characteristic {
+		constructor() {
+			super("Timer Set", CustomCharacteristic.TimerStatus.UUID);
+			this.setProps({
+				format: Formats.BOOL,
+				perms: [Perms.PAIRED_READ, Perms.NOTIFY],
+			});
+			this.value = this.getDefaultValue();
+		}
 	};
 	CustomCharacteristic.TimerStatus.UUID = "2f9bfcd0-00ff-481a-873c-188a2e93d316";
-	util.inherits(CustomCharacteristic.TimerStatus, Characteristic);
 
 	// registerPlatform(pluginName, platformName, constructor, dynamic), dynamic must be true
 	homebridge.registerPlatform("homebridge-airtouch4-platform", "Airtouch", Airtouch, true);
@@ -281,10 +288,9 @@ Airtouch.prototype.updateACAccessory = function(accessory, status) {
 	accessory.context.spillStatus = status.ac_spill;
 	thermostat.setCharacteristic(CustomCharacteristic.SpillStatus, accessory.context.spillStatus);
 
-	accessory.context.timerStatus = status.ac_timer;
+	accessory.context.timerStatus = status.ac_timer_set;
 	thermostat.setCharacteristic(CustomCharacteristic.TimerStatus, accessory.context.timerStatus);
 
-	accessory.updateReachability(true);
 	this.log("Finished updating accessory [" + accessory.displayName + "]");
 };
 
@@ -428,7 +434,6 @@ Airtouch.prototype.updateZoneAccessory = function(accessory, status) {
 		}
 	}
 
-	accessory.updateReachability(true);
 	this.log("Finished updating accessory [" + accessory.displayName + "]");
 };
 
@@ -515,7 +520,6 @@ Airtouch.prototype.updateThermoAccessory = function(accessory, status) {
 	//	temp: accessory.context.currentTemperature
 	//});
 
-	accessory.updateReachability(true);
 	this.log("Finished updating accessory [" + accessory.displayName + "]");
 };
 
